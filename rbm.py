@@ -23,7 +23,9 @@ class RBM():
 		self.w = np.random.uniform(-c, c, [self.NumOfv, self.NumOfh])
 		self.hbias = np.zeros(self.NumOfh)
 		self.vbias = np.zeros(self.NumOfv)
-		self.sum_error = 0
+		self.train_loss = []
+		self.valid_loss = []
+		self.sample = []
 		
 	def Sigmoid(self, z):
 		a = 1/(1 + np.exp(-z))
@@ -55,7 +57,7 @@ class RBM():
 		return activation_v, v_sample
 
 
-	def CDK(self, v0, k=1):
+	def CDK(self, v0, k):
 		
 		h0_sample = self.Sample_h_given_v(v0)
 		h_sample = h0_sample
@@ -65,17 +67,21 @@ class RBM():
 			k -= 1
 
 		error = v0*np.log(activation_v)+(1-v0)*np.log(1-activation_v)
+		error = -sum(error.transpose())
 
-		self.sum_error += -sum(error.transpose())
+		return v0, h0_sample, v_sample, h_sample, error
+	
+	
+	def Update(self, v0, h0_sample, v_sample, h_sample):
 		a = np.dot(v0.reshape(self.NumOfv,1), h0_sample.reshape(1,self.NumOfh))
 		b = np.dot(v_sample.reshape(self.NumOfv,1), h_sample.reshape(1, self.NumOfh))
 		self.w += self.rate*(a - b)
 		self.hbias += self.rate*(h0_sample - h_sample)
 		self.vbias += self.rate*(v0 - v_sample)
 
-
+		
 	def Train(self, train_list):	
-			
+		sum_error = 0	
 		for l in train_list:
 			line = l.split(',')
 			target = int(line[-1])
@@ -84,10 +90,44 @@ class RBM():
 			inputs = inputs>0.5
 			inputs = inputs.astype(int)
 
-			self.CDK(inputs, k=2)
+			v0, h0_sample, v_sample, h_sample, error = self.CDK(inputs, 1)
+			self.Update(v0, h0_sample, v_sample, h_sample)
+			sum_error += error
 
+		return sum_error
+	
+	
+	def Valid(self, valid_list):
+		sum_error = 0	
+		for l in valid_list:
+			line = l.split(',')
+			target = int(line[-1])
+			del line[-1]
+			inputs = np.array(map(float, line))
+			inputs = inputs>0.5
+			inputs = inputs.astype(int)
+
+			v0, h0_sample, v_sample, h_sample, error = self.CDK(inputs, 1)
+			sum_error += error
+
+		return sum_error
 		
-
+		
+		
+	def Sample(self, NumOfSamples):
+		
+		for i in range(NumOfSamples):
+			sample_img = np.random.uniform(0, 1, 784)
+			sample_img = sample_img > 0.5
+			sample_img = sample_img.astype(int)
+			
+			v0, h0_sample, v_sample, h_sample, error = self.CDK(sample_img, 1000)
+			
+			self.sample.append(v_sample)
+		
+		
+		
+		
 	def Main(self, args):
 	
 		self.Initialization(args)
@@ -103,22 +143,24 @@ class RBM():
 		n = 1
 		
 		while(n <= self.NumOfEpoch):
-			self.sum_error = 0
-			self.Train(train_list)	
-			print "epoch--", n, "error: ", self.sum_error/float(3000)
-			n += 1 
-		
-		self.PlotWeight()
+			
+			train_error = self.Train(train_list)/self.NumOfTrain	
+			valid_error = self.Valid(valid_list)/self.NumOfValid
+			self.train_loss.append(train_error)
+			self.valid_loss.append(valid_error)
+			print "epoch--", n, "train_error: ", train_error, "valid_error: ", valid_error
+			n += 1
+			
 		print "training finished!"
-
+		print "start sampling"
+		self.Sample(100)
 		
 		
 	def Plot(self):
 		t = np.arange(0, self.NumOfEpoch, 1)
-		plt.plot(t, self.train_loss, 'r--', t, self.valid_loss, 'b--', t, self.test_loss, 'g--')
+		plt.plot(t, self.train_loss, 'r--', t, self.valid_loss, 'b--')
 		plt.show()
-		plt.plot(t, self.train_err, 'r--', t, self.valid_err, 'b--', t, self.test_err, 'g--')
-		plt.show()
+		
 
 		
 	def PlotWeight(self):
@@ -127,11 +169,23 @@ class RBM():
 			fig = plt.subplot(10,10,i)
 			fig.axes.get_xaxis().set_visible(False)
 			fig.axes.get_yaxis().set_visible(False)
-			fig.imshow(self.w[:,i].reshape(sqrt(self.NumOfv),sqrt(self.NumOfv)), cmap='gray')
+			fig.imshow(self.w[:,i].reshape(28,28), cmap='gray')
+	
+		plt.show()
+		
+		
+		
+	def PlotSample(self):
+		for i in range(100):
+			fig = plt.subplot(10,10,i)
+			fig.axes.get_xaxis().set_visible(False)
+			fig.axes.get_yaxis().set_visible(False)
+			fig.imshow(self.sample[i].reshape(28,28), cmap='gray')
 	
 		
 		plt.show()
-				
+		
+		
 
 if __name__ == "__main__":
 
@@ -146,6 +200,9 @@ if __name__ == "__main__":
 	RBMachine = RBM()
 	RBMachine.Main(args)
 	print("--- %s seconds ---" % (time.time() - start_time))
+	RBMachine.Plot()
+	RBMachine.PlotWeight()
+	RBMachine.PlotSample()
 
 	
 

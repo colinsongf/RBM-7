@@ -19,10 +19,10 @@ class AutoEncoder():
 		self.NumOfEpoch  = args.epoch									# num of epoch
 		
 		self.sum_error  = 0
-		c = np.sqrt(6)/np.sqrt(self.NumOfv + self.NumOfh)
-		self.w = np.random.uniform(-c, c, [self.NumOfh, self.NumOfv]) #w: 100*784
+		C = np.sqrt(6)/np.sqrt(self.NumOfv + self.NumOfh)
+		self.w = np.random.uniform(-C, C, [self.NumOfh, self.NumOfv]) #w: 100*784
 		self.b = np.zeros(self.NumOfh)
-		self.c= np.zeros(self.NumOfv)
+		self.c = np.zeros(self.NumOfv)
 				
 	def TrainFeedForward(self, inputs):
 
@@ -38,33 +38,32 @@ class AutoEncoder():
 	def BackProp(self, inputs, activation_h, activation_a):
 		
 		delta2 =  (inputs-activation_a) # size: 784
-
 		delta1 = np.dot(self.w, delta2)*activation_h*(1-activation_h) # size: 100
-
-		# self.w[1] += np.tile(delta2, (self.NumOfUnits[1],1)).transpose()*np.tile(activation[0], (self.NumOfUnits[2], 1))*self.rate 
-		# self.w[0] += np.tile(delta1, (self.NumOfUnits[0],1)).transpose()*np.tile(inputs, (self.NumOfUnits[1], 1))*self.rate 
-		
-
-
 		self.w += np.tile(delta2, (100, 1))*np.tile(activation_h, (784,1)).transpose()*self.rate + np.tile(delta1, (784, 1)).transpose()*np.tile(inputs, (100,1))*self.rate
+		self.b += delta1
+		self.c += delta2
 
 
 
 	def Train(self, train_list):
 			
-			
+		sum_error = 0	
 		for l in train_list:
 			line = l.split(',')
 			target = int(line[-1])
 			del line[-1]
 			
 			inputs = np.array(map(float, line))
+			inputs = inputs>0.5
+			inputs = inputs.astype(int)
 			activation_h, activation_a = self.TrainFeedForward(inputs)
-			error + = inputs*np.log(activation_a)+(1-inputs)*np.log(1-activation_a)
-			self.sum_error += -sum(error.transpose())
+			error = inputs*np.log(activation_a)+(1-inputs)*np.log(1-activation_a)
+			sum_error += -sum(error.transpose())
 			self.BackProp(inputs, activation_h, activation_a)
-					
 		
+		return sum_error
+
+	
 	
 	def Valid(self, valid_list, length):
 	
@@ -87,6 +86,7 @@ class AutoEncoder():
 		return loss/length, error/float(length)
 		
 
+		
 	def Main(self, args):
 	
 		self.Initialization(args)
@@ -103,19 +103,9 @@ class AutoEncoder():
 		
 		while(n < self.NumOfEpoch):
 				
-			# loss_v, error_v = self.Valid(valid_list, self.NumOfValid)
-			# print "validation error", loss_v, error_v
-			# self.valid_loss.append(loss_v)
-			# self.valid_err.append(error_v)
-			
-			# loss_t, error_t = self.Valid(test_list, self.NumOfTest)
-			# print "test error", loss_t, error_t
-			# self.test_loss.append(loss_t)
-			# self.test_err.append(error_t)
-			
-			#random.shuffle(train_list)
-			self.Train(train_list)
-			#print "training error", loss, error
+			random.shuffle(train_list)
+			sum_error = self.Train(train_list)
+			print "training error", sum_error/3000
 			#self.train_loss.append(loss)
 			#self.train_err.append(error)
 				
@@ -130,21 +120,12 @@ class AutoEncoder():
 		return a
 
 
-	def Softmax(self, z):
-		a = np.exp(z)
-		return a/sum(a)
-
-
 	def Loss(self, t, a):		
 		return sum(t*np.log(a))
 		
 		
 	def Plot(self):
 		t = np.arange(0, self.NumOfEpoch, 1)
-#		plt.plot(t, self.train_loss, 'r--', t, self.valid_loss, 'b--')
-#		plt.show()
-#		plt.plot(t, self.train_err, 'r--', t, self.valid_err, 'b--')
-#		plt.show()
 		plt.plot(t, self.train_loss, 'r--', t, self.valid_loss, 'b--', t, self.test_loss, 'g--')
 		plt.show()
 		plt.plot(t, self.train_err, 'r--', t, self.valid_err, 'b--', t, self.test_err, 'g--')
@@ -158,8 +139,6 @@ class AutoEncoder():
 			fig.axes.get_xaxis().set_visible(False)
 			fig.axes.get_yaxis().set_visible(False)
 			fig.imshow(self.w[i,:].reshape(28,28), cmap='gray')
-	
-		
 		plt.show()
 				
 
@@ -169,7 +148,7 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='script for testing')
 	parser.add_argument('filename', nargs='+')
 	parser.add_argument('--dropout', '-d', type=float, default=1, help='the dropout vallues')
-	parser.add_argument('--rate', '-r', type=float, default=0.1, help='The learning rate')
+	parser.add_argument('--rate', '-r', type=float, default=0.01, help='The learning rate')
 	parser.add_argument('--epoch', '-e', type=int, default=20, help='the number of epoch')
 	parser.add_argument('--visible', '-v', type=int, default=784, help='the number of visible units')
 	parser.add_argument('--hidden', type=int, default=100, help='the number of hidden units')
