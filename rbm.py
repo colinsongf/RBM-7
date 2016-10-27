@@ -154,9 +154,13 @@ class RBM():
 			n += 1
 			
 		print "training finished!"
-		weight = self.w
+		weight = self.w.transpose()
+		bias = self.hbias
+	
 		f = open('rbm.pickle', 'wb')
 		pickle.dump(weight, f)
+		pickle.dump(bias, f)
+	
 		print "start sampling"
 		self.Sample(100)
 		
@@ -171,7 +175,7 @@ class RBM():
 	def PlotWeight(self):
 
 		for i in range(self.NumOfh):
-			fig = plt.subplot(10,10,i)
+			fig = plt.subplot(np.ceil(np.sqrt(self.NumOfh)), np.ceil(np.sqrt(self.NumOfh)) , i)
 			fig.axes.get_xaxis().set_visible(False)
 			fig.axes.get_yaxis().set_visible(False)
 			a = self.w[:,i]

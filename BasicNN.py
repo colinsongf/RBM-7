@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import time
 import argparse
 import random
+import pickle
 class NeuralNetwork():
 
 	def Initialization(self, args):
@@ -29,12 +30,40 @@ class NeuralNetwork():
 		self.dw = []																	# dw
 		self.b = []																		# bias
 		self.db = []
-		for i in range(self.NumOfLayer-1):
-				c = np.sqrt(6)/np.sqrt(self.NumOfUnits[i+1] + self.NumOfUnits[i])
-				self.w.append(np.random.uniform(-c, c, [self.NumOfUnits[i+1], self.NumOfUnits[i]]))
-				self.dw.append(np.zeros(self.w[i].shape))
-				self.b.append(np.random.uniform(-c, c, self.NumOfUnits[i+1]))
-				self.db.append(np.zeros(self.b[i].shape))	
+		
+		
+		
+		
+		
+		
+		if args.pretraining:
+			f = open('ae.pickle', 'rb')
+			weight = pickle.load(f)
+			bias = pickle.load(f)
+			
+			self.w.append(weight)
+			self.b.append(bias)
+			
+		else:
+			c = np.sqrt(6)/np.sqrt(self.NumOfUnits[1] + self.NumOfUnits[0])
+			self.w.append(np.random.uniform(-c, c, [self.NumOfUnits[1], self.NumOfUnits[0]]))
+			self.b.append(np.random.uniform(-c, c, self.NumOfUnits[1]))
+			
+		self.dw.append(np.zeros(self.w[0].shape))
+		self.db.append(np.zeros(self.b[0].shape))	
+		
+		
+		c = np.sqrt(6)/np.sqrt(self.NumOfUnits[2] + self.NumOfUnits[1])
+
+		self.w.append(np.random.uniform(-c, c, [self.NumOfUnits[2], self.NumOfUnits[1]]))
+		self.b.append(np.random.uniform(-c, c, self.NumOfUnits[2]))
+		self.dw.append(np.zeros(self.w[1].shape))		
+		self.db.append(np.zeros(self.b[1].shape))	
+		
+		print self.w[0].shape
+		print self.w[1].shape
+		print self.b[0].shape
+		print self.b[1].shape
 				
 	def TrainFeedForward(self, inputs):
 		activation = []				
@@ -105,6 +134,8 @@ class NeuralNetwork():
 			del line[-1]
 			
 			inputs = np.array(map(float, line))
+			inputs = inputs>0.5
+			inputs = inputs.astype(int)
 			a = self.TrainFeedForward(inputs)
 			if (a[-1].argmax()!=target):
 				error += 1
@@ -127,6 +158,8 @@ class NeuralNetwork():
 			del line[-1]
 			
 			inputs = np.array(map(float, line))
+			inputs = inputs>0.5
+			inputs = inputs.astype(int)
 			a = self.ValidFeedForward(inputs)
 			if (a[-1].argmax()!=target):
 				error += 1
@@ -221,9 +254,10 @@ if __name__ == "__main__":
 	parser.add_argument('filename', nargs='+')
 	parser.add_argument('--dropout', '-d', type=float, default=1, help='the dropout vallues')
 	parser.add_argument('--rate', '-r', type=float, default=0.1, help='The learning rate')
-	parser.add_argument('--epoch', '-e', type=int, default=200, help='the number of epoch')
+	parser.add_argument('--epoch', '-e', type=int, default=50, help='the number of epoch')
 	parser.add_argument('--momentum', '-m', type=float, default=0, help='momentum parameter')
 	parser.add_argument('--layer', '-l', type=int, nargs='+', default =(784, 100, 10), help='the number of units for each layer')
+	parser.add_argument('--pretraining','-p',action="store_true", help='use pretraining')
 	args = parser.parse_args()
 	NN = NeuralNetwork()
 	NN.Main(args)
