@@ -39,7 +39,7 @@ class AutoEncoder():
 		
 		delta2 =  (inputs-activation_a) # size: 784
 		delta1 = np.dot(self.w, delta2)*activation_h*(1-activation_h) # size: 100
-		self.w += np.tile(delta2, (100, 1))*np.tile(activation_h, (784,1)).transpose()*self.rate + np.tile(delta1, (784, 1)).transpose()*np.tile(inputs, (100,1))*self.rate
+		self.w += np.tile(delta2, (self.NumOfh, 1))*np.tile(activation_h, (784,1)).transpose()*self.rate + np.tile(delta1, (784, 1)).transpose()*np.tile(inputs, (self.NumOfh,1))*self.rate
 		self.b += delta1
 		self.c += delta2
 
@@ -138,7 +138,11 @@ class AutoEncoder():
 			fig = plt.subplot(10,10,i)
 			fig.axes.get_xaxis().set_visible(False)
 			fig.axes.get_yaxis().set_visible(False)
-			fig.imshow(self.w[i,:].reshape(28,28), cmap='gray')
+			a = self.w[i,:]
+			mina = min(a)
+			maxa = max(a)
+			a = 255*(a - mina)/(maxa-mina)
+			fig.imshow(a.reshape(28,28), cmap='gray')
 		plt.show()
 				
 

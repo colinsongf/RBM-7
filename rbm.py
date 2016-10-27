@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import time
 import argparse
 import random
+import pickle
 
 
 class RBM():
@@ -19,6 +20,7 @@ class RBM():
 		self.NumOfh  = args.hidden													# num of hidden layer
 		self.rate        = args.rate          										# learning rate
 		self.NumOfEpoch  = args.epoch												# num of epoch	
+		self.k 				= args.ksteps
 		c = np.sqrt(6)/np.sqrt(self.NumOfv + self.NumOfh)
 		self.w = np.random.uniform(-c, c, [self.NumOfv, self.NumOfh])
 		self.hbias = np.zeros(self.NumOfh)
@@ -90,7 +92,7 @@ class RBM():
 			inputs = inputs>0.5
 			inputs = inputs.astype(int)
 
-			v0, h0_sample, v_sample, h_sample, error = self.CDK(inputs, 1)
+			v0, h0_sample, v_sample, h_sample, error = self.CDK(inputs, self.k)
 			self.Update(v0, h0_sample, v_sample, h_sample)
 			sum_error += error
 
@@ -107,7 +109,7 @@ class RBM():
 			inputs = inputs>0.5
 			inputs = inputs.astype(int)
 
-			v0, h0_sample, v_sample, h_sample, error = self.CDK(inputs, 1)
+			v0, h0_sample, v_sample, h_sample, error = self.CDK(inputs, self.k)
 			sum_error += error
 
 		return sum_error
@@ -152,6 +154,9 @@ class RBM():
 			n += 1
 			
 		print "training finished!"
+		weight = self.w
+		f = open('rbm.pickle', 'wb')
+		pickle.dump(weight, f)
 		print "start sampling"
 		self.Sample(100)
 		
@@ -169,7 +174,11 @@ class RBM():
 			fig = plt.subplot(10,10,i)
 			fig.axes.get_xaxis().set_visible(False)
 			fig.axes.get_yaxis().set_visible(False)
-			fig.imshow(self.w[:,i].reshape(28,28), cmap='gray')
+			a = self.w[:,i]
+			mina = min(a)
+			maxa = max(a)
+			a = 255*(a - mina)/(maxa-mina)
+			fig.imshow(a.reshape(28,28), cmap='gray')
 	
 		plt.show()
 		
@@ -196,6 +205,7 @@ if __name__ == "__main__":
 	parser.add_argument('--epoch', '-e', type=int, default=50, help='the number of epoch')
 	parser.add_argument('--visible', '-v', type=int, default=784, help='the number of visible units')
 	parser.add_argument('--hidden', type=int, default=100, help='the number of hidden units')
+	parser.add_argument('--ksteps','-k', type=int, default=1, help='the number of k steps')
 	args = parser.parse_args()
 	RBMachine = RBM()
 	RBMachine.Main(args)
